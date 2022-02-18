@@ -1,13 +1,15 @@
 <template>
-  <div class="wrapper">
-    <button type="button" @click="shuffleData">Shuffle</button>
-<!--    <my-dialog @create="createData"></my-dialog>-->
-    <form @submit.prevent>
+
+    <form class="form-data" id="addForm" @submit.prevent>
       <my-input v-model="labelsValues">label</my-input>
       <my-input v-model="testValue">value</my-input>
 
       <button @click="createData">create</button>
     </form>
+  <div class="wrapper">
+    <button type="button" @click="shuffleData">Shuffle</button>
+<!--    <my-dialog @create="createData"></my-dialog>-->
+
     <DoughnutChart
         class="doughnut-chart"
         :data="testData"
@@ -20,6 +22,7 @@
       <button id="nîmes" @click="toggleData(1)">second</button>
       <button id="toulon" @click="toggleData(2)">third</button>
       <button id="perpignan" @click="toggleData(3)">four</button>
+      <button @click="showForm">+</button>
     </div>
 
 
@@ -92,6 +95,8 @@ export default {
 
     function createData(){
       dataValues.value = concat(dataValues.value, testValue.value);
+      testValue.value = '';
+      document.getElementById('addForm').style.display = 'none';
     }
     function toggleData(value){
       console.log(value);
@@ -100,7 +105,11 @@ export default {
       console.log(chart);
     }
 
-    return { shuffleData, createData, dataValues, toggleData, labelsValues, testValue, testData, options, handleChartRender };
+    function showForm(){
+      document.getElementById('addForm').style.display = 'flex';
+    }
+
+    return { shuffleData, createData, dataValues, toggleData, showForm, labelsValues, testValue, testData, options, handleChartRender };
   },
 };
 </script>
@@ -116,22 +125,40 @@ export default {
 }
 .wrapper{
   margin: 0 auto;
-  width: 555px;
+  width: 400px;
   text-align: center;
 }
 .chart-btn{
   margin: 0 auto;
   width: 630px;
-  padding-top: 150px;
+  padding-top: 100px;
   display: flex;
   justify-content: space-between;
 }
 .chart-btn button{
-  width: 120px;
-  height: 120px;
+  width: 100px;
+  height: 100px;
   border-radius: 50%;
   background-color: red;
   border: none;
-  font-size: 24px;
+  font-size: 18px;
+}
+.form-data{
+  display: none;
+  flex-flow: column wrap;
+  width: 400px;
+  height: 300px;
+  background-color: #fff;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 5px 5px rgba(0,0,0,0.5);
+  position: absolute;
+}
+.form-data input{
+  margin: 10px auto;
+  height: 30px;
+  width: 150px;
+
 }
 </style>
