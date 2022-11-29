@@ -1,61 +1,82 @@
 <template>
+  <div :class="{'fade': showForm === true}">
+    <form class="chart_form-data" v-if="showForm" @submit.prevent>
+      <ChartFormInput v-model="labelValue" placeholder="Наименование"></ChartFormInput>
+      <ChartFormInput v-model.number="numberValue" placeholder="Кол-во"></ChartFormInput>
+      <div style="display: flex; justify-content: space-between">
+        <button @click="createData('+')">Прибыль</button>
+        <button @click="createData('-')">Трата</button>
+      </div>
+    </form>
 
-  <form class="form-data" id="addForm" @submit.prevent>
-    <my-input v-model="labelValue">label</my-input>
-    <my-input v-model.number="numberValue">value</my-input>
-    <button @click="createData">create</button>
-  </form>
-  <div class="wrapper">
-    <!--    <my-dialog @create="createData"></my-dialog>-->
+    <section class="chart">
+      <DoughnutChart
+          class="doughnut-chart"
+          :data="chartData"
+          :options="options"
+      />
+      <h1 class="chart_center-text">
+        <p v-if="sumOfDigits > 0">Прибыль</p>
+        <p v-else-if="sumOfDigits < 0">Остаток</p>
+        {{ sumOfDigits }} ₽
+      </h1>
+    </section>
 
-    <DoughnutChart
-        class="doughnut-chart"
-        :data="testData"
-        :options="options"
-        @chart:render="handleChartRender"
-    />
-    <h1 class="sum-of-money">{{ sumOfDigits }}</h1>
+    <section class="category_btns">
+      <template v-if="obj.labelsValues">
+        <div v-for="item in getColor"
+             :key="item"
+             class="category_btns-table"
+        >
+            <button :id="item" :style="{'border': `5px solid ${item['color']}`}">
+              {{
+                (item['label'] + '').length > 9 ? (item['label'] + '').slice(0,9) + '...' : (item['label'] + '')
+              }}
+            </button>
+        </div>
+      </template>
+      <button class="show-form_btn" @click="toggleForm()">+</button>
+    </section>
   </div>
-  <div class="chart-btn" >
-    <!--      <button :id="item" @click="toggleData(0)">{{ item }}</button>-->
-    <!--      <button id="nîmes" @click="toggleData(1)">second</button>-->
-    <!--      <button id="toulon" @click="toggleData(2)">third</button>-->
-    <!--      <button id="perpignan" @click="toggleData(3)">four</button>-->
-    <button @click="showForm">+</button>
-  </div>
-
-
 </template>
 
 <script>
-import {computed, ref, onMounted} from "vue";
+import {computed, ref} from "vue";
 import { concat } from "lodash";
 import { DoughnutChart } from "vue-chart-3";
-
-// import MyDialog from "./components/UI/MyDialog";
-import MyInput from "./components/UI/MyInput";
+import ChartFormInput from "./components/UI/ChartFormInput";
 
 export default {
   name: "App",
-  components: { DoughnutChart, MyInput},
+  components: { DoughnutChart, ChartFormInput},
   setup() {
     let numberValue = ref(null);
     let labelValue = ref('');
+    let Transactions = ref([]);
     let obj = ref({
-      labelsValues: [" "],
-      dataValues: [1],
-      colorsValues: ["#77CEFF"],
+      labelsValues: [],
+      dataValues: [],
+      colorsValues: [],
     });
+    let showForm = ref(false);
 
-    const testData = computed(() => ({
-      labels: obj.value.labelsValues,
-      datasets: [
-        {
-          data: obj.value.dataValues,
-          backgroundColor: obj.value.colorsValues,
-        },
-      ],
-    }));
+    function Transaction(data,label,color) {
+      this.id = Date.now();
+      this.data = [data]
+      this.label = [label]
+      this.color = color
+    }
+
+    const chartData = computed(() => ({
+        labels: obj.value.labelsValues,
+        datasets: [
+          {
+            data: obj.value.dataValues,
+            backgroundColor: obj.value.colorsValues,
+          },
+        ],
+      })
+    );
 
     const options = ref({
       responsive: true,
@@ -63,7 +84,6 @@ export default {
       cutout: '80%',
       plugins: {
         legend: {
-          // position: "top",
           display: false
         },
         title: {
@@ -73,59 +93,50 @@ export default {
       },
     });
 
-    onMounted(() => {
-      // document.getElementById('paris').style.backgroundColor = testData.value.datasets[0].backgroundColor[0];
-      // document.getElementById('nîmes').style.backgroundColor = testData.value.datasets[0].backgroundColor[1];
-      // document.getElementById('toulon').style.backgroundColor = testData.value.datasets[0].backgroundColor[2];
-      // document.getElementById('perpignan').style.backgroundColor = testData.value.datasets[0].backgroundColor[3];
-      // document.getElementById('paris').innerText = testData.value.labels[0];
-      // document.getElementById('nîmes').innerText = testData.value.labels[1];
-      // document.getElementById('toulon').innerText = testData.value.labels[2];
-      // document.getElementById('perpignan').innerText = testData.value.labels[3];
-    })
+    function createData(value){
+      let color = `#${(Math.random() * 0x1000000 | 0x1000000).toString(16).slice(1)}`
 
-    function createData(){
-      obj.value.dataValues = concat(obj.value.dataValues, numberValue.value);
+      Transactions.value.push(new Transaction(+(`${value}${numberValue.value}`), labelValue.value, color))
+
+      obj.value.dataValues = concat(obj.value.dataValues, +(`${value}${numberValue.value}`));
       obj.value.labelsValues.push(labelValue.value);
+      obj.value.colorsValues.push(color);
+
       numberValue.value = null;
       labelValue.value = null;
-      console.log(obj.value);
-      document.getElementById('addForm').style.display = 'none';
-      let color = Math.floor(Math.random()*0xFFFFFF<<0).toString(16);
-      testData.value.datasets[0].backgroundColor.push(`#${color}`);
-      // testData.value.datasets[0].backgroundColor[0] = 'dd'
-    }
-    function toggleData(value){
-      console.log(value);
-    }
-    function handleChartRender(chart) {
-      console.log(chart);
+      showForm.value = false;
     }
 
-    function showForm(){
-      document.getElementById('addForm').style.display = 'flex';
-      // console.log(Math.floor(Math.random()*0xFFFFFF<<0).toString(16));
+    // function getColor(){
+    //   console.log(Object.values(Transactions)[4]);
+    //   return Object.values(Transactions)[4]
+    //   // console.log(Object.values(Transactions)[4][1]?.color);
+    // }
+
+    function toggleForm(){
+      showForm.value = true;
     }
-
-
 
     return {
       createData,
-      toggleData,
+      toggleForm,
       showForm,
       obj,
+      Transactions,
       numberValue,
       labelValue,
-      testData,
+      chartData,
       options,
-      handleChartRender };
+     };
   },
   computed: {
     sumOfDigits(){
-      return this.obj.dataValues.reduce((a,b) => a + b, 0)
+      return this.obj.dataValues.reduce((a,b) => a + b, 0).toFixed(2)
     },
+    getColor(){
+      return Object.values(this.Transactions)
+    }
   }
-
 };
 </script>
 
@@ -134,68 +145,119 @@ export default {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  text-align: center;
+  color: #fff;
 }
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
+  height: 100vh;
+  width: 100vw;
+  padding-top: 100px;
   color: #2c3e50;
-  margin-top: 60px;
+  background: linear-gradient(199.76deg, #030083 29.39%, #000A2E 49.65%, #0A001F 72.65%);
 }
-.wrapper{
+section.chart{
   position: relative;
   margin: 0 auto;
   width: 400px;
   text-align: center;
 }
-.chart-btn{
-  margin: 0 auto;
-  width: 630px;
+.chart_center-text{
+   margin-top: -215px;
+ }
+
+.category_btns{
+  margin: 150px auto;
+  width: 700px;
   padding-top: 100px;
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
 }
-.chart-btn button{
-  background-color:#000;
-  color: #ffffff;
+.category_btns button{
+  background-color: transparent;
   width: 100px;
   height: 100px;
   border-radius: 50%;
   border: none;
-  font-size: 18px;
+  font-size: 16px;
+  margin: 10px;
 }
-.sum-of-money{
-  margin: 0;
-  padding: 0;
-  position: absolute;
-  top: 45%;
-  right: 45%;
-  bottom: 45%;
-  left: 45%;
+.category_btns-table{
+  display: flex;
+}
+button.show-form_btn{
+  background-color: #646464;
+  color: #373737;
+  font-size: 48px;
+}
 
-}
-.form-data{
-  display: none;
+.chart_form-data{
+  display: flex;
   flex-flow: column wrap;
   width: 400px;
-  height: 300px;
-  background-color: #fff;
+  height: 200px;
+  background-color: rgba(255, 0, 0, 0.29);
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   box-shadow: 5px 5px 20px rgba(0,0,0,0.5);
   position: absolute;
-  border-radius: 5px;
+  border-radius: 8px;
   padding: 25px;
   z-index: 10;
 }
-.form-data input{
+.chart_form-data:after{
+  content: '';
+  width: 400px;
+  height: 200px;
+  position: absolute;
+  border-radius: 8px;
+  top: 0;
+  left: 0;
+  transform: rotate(-6.82deg);
+  background-color: rgba(57, 88, 170, 0.29);
+  z-index: 5;
+}
+.fade:after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,.5);
+  z-index: 5;
+}
+
+
+.chart_form-data input{
+  background-color: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.25);
+  outline: none;
+  font-size: 16px;
+  font-weight: normal;
+  padding: 5px;
+  text-align: left;
   margin-bottom: 10px;
   height: 30px;
-  border: 1px solid #ccc;
   width: 100%;
-
-
+  z-index: 6;
+}
+.chart_form-data button{
+  background-color: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.25);
+  outline: none;
+  font-weight: normal;
+  font-size: 16px;
+  margin: 0 auto;
+  width: 160px;
+  height: 30px;
+  border-radius: 5px;
+  z-index: 6;
+  /*background-color: rgba(255,255,255,0.1);*/
 }
 </style>

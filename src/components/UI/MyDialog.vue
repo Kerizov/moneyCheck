@@ -8,7 +8,7 @@
 </template>
 
 <script>
-import MyInput from "./MyInput";
+import MyInput from "./ChartFormInput";
 
 export default {
   name: "my-dialog",
