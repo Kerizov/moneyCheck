@@ -35,8 +35,9 @@
               {{(item['label'] + '').length > 9 ? (item['label'] + '').slice(0,9) + '...' : (item['label'] + '') }}
             </button>
         </div>
+        <button v-if="obj.labelsValues.length < 15" class="show-form_btn" @click="toggleForm()">+</button>
       </template>
-      <button class="show-form_btn" @click="toggleForm()">+</button>
+
     </section>
   </div>
 </template>
@@ -48,7 +49,7 @@ import {DoughnutChart} from "vue-chart-3";
 import ChartFormInput from "./components/UI/ChartFormInput";
 
     let numberValue = ref(null);
-    let labelValue = ref('');
+    let labelValue = ref(null);
     let transactions = ref([]);
     let obj = ref({
       labelsValues: [],
