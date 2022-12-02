@@ -1,9 +1,14 @@
 <template>
-  <div :class="{'fade': showForm === true}">
+  <div :class="{'fade' : showForm === true}">
     <form class="chart_form-data" v-if="showForm" @submit.prevent>
       <ChartFormInput v-model="labelValue" placeholder="Наименование"></ChartFormInput>
-      <ChartFormInput v-model.number="numberValue" placeholder="Кол-во"></ChartFormInput>
-      <div style="display: flex; justify-content: space-between">
+      <ChartFormInput v-model.number="numberValue" type="number" placeholder="Кол-во"></ChartFormInput>
+      <div class="chart_form-data-color">
+        <label>Выберите цвет:</label>
+        <ChartFormInput v-model="colorValue" type="color"></ChartFormInput>
+      </div>
+
+      <div>
         <button @click="createData('+')">Прибыль</button>
         <button @click="createData('-')">Трата</button>
       </div>
@@ -16,15 +21,15 @@
           :options="options"
       />
       <h1 class="chart_center-text">
-        <p v-if="sumOfDigits() > 0">Доход</p>
-        <p v-else-if="sumOfDigits() < 0">Остаток</p>
-        {{ sumOfDigits() }} $
+        <p v-if="getSumOfTransactions() > 0">Доход</p>
+        <p v-else-if="getSumOfTransactions() < 0">Остаток</p>
+        {{ getSumOfTransactions() }} $
       </h1>
     </section>
 
     <section class="category_btns">
-      <template v-if="obj.labelsValues">
-        <div v-for="item in getColor()"
+      <template v-if="transactions">
+        <div v-for="item in getCategory()"
              :key="item"
              class="category_btns-table"
         >
@@ -32,10 +37,12 @@
                 :id="item"
                 :style="{'border': `5px solid ${item['color']}`}"
             >
-              {{(item['label'] + '').length > 9 ? (item['label'] + '').slice(0,9) + '...' : (item['label'] + '') }}
+              {{(item['data'] + '').length > 8 ? (item['data'] + '').slice(0,8) + '...' : (item['data'] + '') }}
+              <br>
+              {{(item['label'] + '').length > 8 ? (item['label'] + '').slice(0,8) + '...' : (item['label'] + '') }}
             </button>
         </div>
-        <button v-if="obj.labelsValues.length < 15" class="show-form_btn" @click="toggleForm()">+</button>
+        <button v-if="transactions.length < 15" class="show-form_btn" @click="toggleForm()">+</button>
       </template>
 
     </section>
@@ -44,21 +51,17 @@
 
 <script setup>
 import {computed, ref} from "vue";
-import {concat} from "lodash";
 import {DoughnutChart} from "vue-chart-3";
 import ChartFormInput from "./components/UI/ChartFormInput";
 
-    let numberValue = ref(null);
-    let labelValue = ref(null);
+    let numberValue = ref(null),
+        labelValue = ref(null),
+        colorValue = ref(null);
+
     let transactions = ref([]);
-    let obj = ref({
-      labelsValues: [],
-      dataValues: [],
-      colorsValues: [],
-    });
     let showForm = ref(false);
 
-    function Transaction(data,label,color) {
+    function Transaction(data, label, color) {
       this.id = Date.now();
       this.data = [data]
       this.label = [label]
@@ -66,11 +69,11 @@ import ChartFormInput from "./components/UI/ChartFormInput";
     }
 
     const chartData = computed(() => ({
-        labels: obj.value.labelsValues,
+        labels: getLabel().value,
         datasets: [
           {
-            data: obj.value.dataValues,
-            backgroundColor: obj.value.colorsValues,
+            data: getData().value,
+            backgroundColor: getColor().value,
           },
         ],
       }));
@@ -91,14 +94,8 @@ import ChartFormInput from "./components/UI/ChartFormInput";
       },
     });
 
-    function createData(value){
-      let color = `${"hsl(" + 360 * Math.random() + ',' + 100 + '%,' + 50 + '%)'}`
-
-      transactions.value.push(new Transaction(+(`${value}${numberValue.value}`), labelValue.value, color))
-
-      obj.value.dataValues = concat(obj.value.dataValues, +(`${value}${numberValue.value}`));
-      obj.value.labelsValues.push(labelValue.value);
-      obj.value.colorsValues.push(color);
+    function createData(operand){
+      transactions.value.push(new Transaction(+(`${operand}${numberValue.value}`), labelValue.value, colorValue.value))
 
       numberValue.value = null;
       labelValue.value = null;
@@ -109,11 +106,23 @@ import ChartFormInput from "./components/UI/ChartFormInput";
       showForm.value = true;
     }
 
-    function sumOfDigits(){
-      return computed(() => obj.value.dataValues.reduce((a, b) => a + b, 0).toFixed(2)).value
+    function getSumOfTransactions(){
+      return computed(() => [...getData().value].reduce((a, b) => a + b, 0).toFixed(2)).value
+    }
+
+    function getData(){
+      return computed( () => Object.values(transactions.value).map(i => i['data'][0]))
+    }
+
+    function getLabel(){
+      return computed(() => Object.values(transactions.value).map(i => i['label'][0]))
     }
 
     function getColor(){
+      return computed(() => Object.values(transactions.value).map(i => i['color']))
+    }
+
+    function getCategory(){
       return computed(() => Object.values(transactions.value)).value
     }
 </script>
@@ -126,6 +135,14 @@ import ChartFormInput from "./components/UI/ChartFormInput";
   text-align: center;
   color: #fff;
 }
+body{
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  background: linear-gradient(199.76deg, #030083 29.39%, #000A2E 49.65%, #0A001F 72.65%) fixed;
+}
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -135,7 +152,6 @@ import ChartFormInput from "./components/UI/ChartFormInput";
   width: 100vw;
   padding-top: 100px;
   color: #2c3e50;
-  background: linear-gradient(199.76deg, #030083 29.39%, #000A2E 49.65%, #0A001F 72.65%);
 }
 section.chart{
   position: relative;
@@ -151,9 +167,9 @@ section.chart{
   font-weight: 400;
 }
 .category_btns{
-  margin: 150px auto;
-  width: 700px;
-  padding-top: 100px;
+  margin: 150px auto 0 auto;
+  max-width: 700px;
+  padding: 100px 20px;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -180,21 +196,30 @@ button.show-form_btn{
   display: flex;
   flex-flow: column wrap;
   width: 400px;
-  height: 200px;
+  height: 240px;
   background-color: rgba(255, 0, 0, 0.29);
   box-shadow: 5px 5px 20px rgba(0,0,0,0.5);
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  position: absolute;
+  position: fixed;
   border-radius: 8px;
-  padding: 40px 25px 0px 25px;
+  padding: 40px 25px 0 25px;
   z-index: 10;
+}
+.chart_form-data > div{
+  display: flex;
+}
+.chart_form-data-color{
+  display: flex;
+  justify-content: left;
+  align-items: center;
+  margin: 0 7px;
 }
 .chart_form-data:after{
   content: '';
   width: 400px;
-  height: 200px;
+  height: 240px;
   position: absolute;
   border-radius: 8px;
   top: 0;
@@ -205,12 +230,12 @@ button.show-form_btn{
 }
 .fade:after {
   content: '';
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
-  background: rgba(0,0,0,.9);
+  bottom: -100px;
+  background: rgba(0,0,0,0.9) fixed;
   z-index: 5;
 }
 .chart_form-data input{
